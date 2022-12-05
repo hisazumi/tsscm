@@ -1,0 +1,22 @@
+{
+  "name": "tsscm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "tscm2.js",
+  "scripts": {
+    "build": "tsc tscm2.ts",
+    "start": "node tscm2.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/core-js": "^2.5.5",
+    "@types/jest": "^28.0.0",
+    "jest": "^28.0.0",
+    "ts-jest": "^28.0.0",
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "@types/node": "^18.11.10"
+  }
+}
