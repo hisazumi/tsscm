@@ -20,6 +20,7 @@ export const intern = (sym: string): SSymbol => {
 export type Atom = string | number | Function | SSymbol;
 export type Slist = Array<Atom | Slist>;
 export type Sobj = Atom | Slist;
+export type SEnv = Map<SSymbol, Sobj>;
 
 const atomp = (v: Sobj): boolean => {
     const type = typeof v;
@@ -27,7 +28,7 @@ const atomp = (v: Sobj): boolean => {
         || v instanceof Function || v instanceof SSymbol;
 }
 
-export const seval = (ls: Sobj, env: Map<SSymbol, Sobj>): Sobj => {
+export const seval = (ls: Sobj, env: SEnv): Sobj => {
     if (atomp(ls)) {
         if (ls instanceof SSymbol) {
             const o = env.get(ls);
@@ -85,7 +86,7 @@ export const sparser = (str: string): Sobj => {
     return processToken(0)[0];
 };
 
-export const peval = (str: string, env: Map<SSymbol, Sobj>): Sobj => {
+export const peval = (str: string, env: SEnv): Sobj => {
     return seval(sparser(str), env);
 }
 
