@@ -29,14 +29,18 @@ const atomp = (v: Sobj): boolean => {
 }
 
 export const seval = (ls: Sobj, env: SEnv): Sobj => {
+    const lookupSymbol = (symbol:SSymbol) : Sobj => {
+        const o = env.get(symbol);
+        if (o == undefined) {
+            throw new Error('symbol {ls} not found');
+        }else{
+            return o;
+        }
+    }
+
     if (atomp(ls)) {
         if (ls instanceof SSymbol) {
-            const o = env.get(ls);
-            if (o === undefined) {
-                throw new Error('symbol {ls} not found');
-            } else {
-                return o;
-            }
+            return lookupSymbol(ls);
         } else {
             return ls;
         }
