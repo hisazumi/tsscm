@@ -28,7 +28,6 @@ const atomp = (v: Sobj): boolean => {
 }
 
 export const seval = (ls: Sobj, env: Map<SSymbol, Sobj>): Sobj => {
-    //    console.log(ls);
     if (atomp(ls)) {
         if (ls instanceof SSymbol) {
             const o = env.get(ls);
@@ -55,6 +54,43 @@ export const seval = (ls: Sobj, env: Map<SSymbol, Sobj>): Sobj => {
     }
 };
 
+export const sparser = (str: string): Sobj => {
+    const tokens = str.match(/[()]|[^\s()]+/g);
+    if (tokens == null) {
+        return "";
+    }
+
+    // トークンを処理する再帰関数
+    const processToken = (i: number): [Sobj, number] => {
+        const token = tokens[i];
+        if (token === '(') {
+            const list = [];
+            i++;
+            while (tokens[i] !== ')') {
+                const [value, index] = processToken(i);
+                list.push(value);
+                i = index;
+            }
+            return [list, i + 1];
+        } else if (token === ')') {
+            throw new Error('unexpected )');
+        } else if (token[0] === "\"" && token[token.length - 1] === "\"") {
+            // string
+            return [token.slice(1, token.length - 1), i + 1];
+        } else if (!isNaN(Number(token))) {
+            // number
+            return [Number(token), i + 1];
+        } else {
+            // symbol
+            return [intern(token), i + 1];
+        }
+    };
+
+    return processToken(0)[0];
+};
+
+//-------------------------------------------------------
+// Environment
 export const topLevel = new Map<SSymbol, Sobj>();
 
 topLevel.set(intern('display'), (ls: Slist) => {
@@ -71,12 +107,3 @@ topLevel.set(intern('+'), (ls: Slist) => {
     });
 });
 
-export const disp = () => {
-    console.log("hoge");
-}
-
-const f = topLevel.get(intern('+')) as Function;
-console.log(f([10, 20]));
-// (display (+ 10 20))
-console.log(seval([intern('+'), 10, 20], topLevel));
-console.log(seval([intern('+'), 10, 20, [intern('+'), 20, 30]], topLevel));
