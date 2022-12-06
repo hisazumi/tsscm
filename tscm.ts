@@ -17,9 +17,9 @@ export const intern = (sym: string): SSymbol => {
     }
 }
 
-type Atom = string | number | Function | SSymbol;
-type Slist = Array<Atom | Slist>;
-type Sobj = Atom | Slist;
+export type Atom = string | number | Function | SSymbol;
+export type Slist = Array<Atom | Slist>;
+export type Sobj = Atom | Slist;
 
 const atomp = (v: Sobj): boolean => {
     const type = typeof v;
@@ -32,9 +32,7 @@ export const seval = (ls: Sobj, env: Map<SSymbol, Sobj>): Sobj => {
         if (ls instanceof SSymbol) {
             const o = env.get(ls);
             if (o === undefined) {
-                // error
-                console.log('symbol {ls} not found');
-                return ls;
+                throw new Error('symbol {ls} not found');
             } else {
                 return o;
             }
@@ -46,11 +44,10 @@ export const seval = (ls: Sobj, env: Map<SSymbol, Sobj>): Sobj => {
         if (evaledls[0] instanceof Function) {
             return evaledls[0](evaledls.slice(1));
         } else {
-            // error
-            return evaledls;
+            throw new Error('{evaledls[0]} is not applicable')
         }
     } else {
-        return [];
+        throw new Error('cannot evaluate {ls}');
     }
 };
 
@@ -60,7 +57,6 @@ export const sparser = (str: string): Sobj => {
         return "";
     }
 
-    // トークンを処理する再帰関数
     const processToken = (i: number): [Sobj, number] => {
         const token = tokens[i];
         if (token === '(') {
@@ -88,6 +84,10 @@ export const sparser = (str: string): Sobj => {
 
     return processToken(0)[0];
 };
+
+export const peval = (str: string, env: Map<SSymbol, Sobj>): Sobj => {
+    return seval(sparser(str), env);
+}
 
 //-------------------------------------------------------
 // Environment
