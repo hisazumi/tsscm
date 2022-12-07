@@ -25,5 +25,6 @@ test("peval", () => {
 test("lambda", () => {
     expect(peval("((lambda () 1))", topLevel)).toBe(1);
     expect(peval("((lambda (x) x) 1)", topLevel)).toBe(1);
+    expect(peval("((lambda (x) (+ x x)) 2)", topLevel)).toBe(4);
     
 });
