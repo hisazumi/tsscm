@@ -6,7 +6,7 @@ class SSymbol {
 }
 
 class SLambda {
-    constructor(args:Array<SSymbol>, body:Array<Sobj>, env:SEnv){
+    constructor(args: Array<SSymbol>, body: Array<Sobj>, env: SEnv) {
         this.args = args;
         this.body = body;
         this.env = env;
@@ -40,20 +40,20 @@ const atomp = (v: Sobj): boolean => {
 }
 
 export const seval = (ls: Sobj, env: SEnv): Sobj => {
-    console.log(ls);
-    const lookupSymbol = (symbol:SSymbol) : Sobj => {
+//    console.log(ls);
+    const lookupSymbol = (symbol: SSymbol): Sobj => {
         const o = env.get(symbol);
         if (o == undefined) {
             throw new Error(`symbol ${ls} not found`);
-        }else{
+        } else {
             return o;
         }
     }
 
-    const buildLambda = (ls:Array<Sobj>):SLambda => {
-        if(ls[1] instanceof Array) { // args 
+    const buildLambda = (ls: Array<Sobj>): SLambda => {
+        if (ls[1] instanceof Array) { // args 
             const args = ls[1].map(v => {
-                if(v instanceof SSymbol) {
+                if (v instanceof SSymbol) {
                     return v;
                 } else {
                     throw new Error('unexpected symbol');
@@ -62,7 +62,7 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
             const body = ls.slice(2, ls.length);
             const newEnv = new Map(env);
             return new SLambda(args, body, newEnv);
-        }else{
+        } else {
             throw new Error(`unexpected arguments ${ls[1]}`)
         }
     }
@@ -73,31 +73,42 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
         } else {
             return ls;
         }
-    } else if(ls instanceof SLambda) {
-        console.log('execute lambda');
+    } else if (ls instanceof SLambda) {
         return seval(ls.body, ls.env);
     } else if (ls instanceof Array) {
         if (ls[0] instanceof SSymbol) {
             const symbol = ls[0];
-            if(symbol === intern('lambda')) {
+            if (symbol === intern('lambda')) {
                 return buildLambda(ls);
-            }else{
-                const evaledls = ls.map((v) => seval(v, env));
-                if (evaledls[0] instanceof Function) {
-                    return evaledls[0](evaledls.slice(1));
+            } else {
+                const first = seval(ls[0], env);
+
+                if (first instanceof Function) {
+                    return first(ls.slice(1).map((v) => seval(v, env)));
                 } else {
-                    throw new Error(`${evaledls[0]} is not applicable`)
+                    let result = seval(first, env);
+                    ls.slice(1).forEach((v) => result = seval(v, env));
+                    return result;
                 }
             }
-        }else if(ls[0] instanceof Array) {
+        } else if (ls[0] instanceof Array) {
             const result = seval(ls[0], env);
             if (result instanceof SLambda) {
-                // should setup arg env
-                return seval(result.body, result.env);
-            }else{
+                const args = ls.slice(1, ls.length);
+                if (args.length != result.args.length) {
+                    throw new Error("argument mismatch");
+                }
+
+                const envwargs = new Map(result.env);
+                for (let i = 0; i < args.length; i++) {
+                    envwargs.set(result.args[i], seval(args[i], env));
+                }
+
+                return seval(result.body, envwargs);
+            } else {
                 return result;
             }
-        }else{
+        } else {
             return ls[0];
         }
     } else {
@@ -161,4 +172,4 @@ topLevel.set(intern('+'), (ls: Slist) => {
     });
 });
 
-console.log(peval("((lambda () 1))", topLevel))
+console.log(peval("((lambda (x) x) 1)", topLevel))
