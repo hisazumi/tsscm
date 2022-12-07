@@ -4,8 +4,8 @@
   "description": "",
   "main": "tscm2.js",
   "scripts": {
-    "build": "tsc tscm2.ts",
-    "start": "node tscm2.js"
+    "build": "tsc tscm.ts",
+    "start": "node tscm.js"
   },
   "author": "",
   "license": "ISC",
