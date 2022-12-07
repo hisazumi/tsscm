@@ -171,5 +171,3 @@ topLevel.set(intern('+'), (ls: Slist) => {
         }
     });
 });
-
-console.log(peval("((lambda (x) x) 1)", topLevel))
