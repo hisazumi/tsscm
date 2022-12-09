@@ -59,7 +59,6 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
                     throw new Error('unexpected symbol');
                 }
             });
-            console.log(args);
             const body = ls.slice(2, ls.length);
             const newEnv = new Map(env);
             return new SLambda(args, body, newEnv);
@@ -70,15 +69,11 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
 
     const evalLambda = (slambda : SLambda, realargs:Array<Sobj>) => {
         if (realargs.length != slambda.args.length) {
-            console.log(slambda.args);
-            console.log(realargs);
             throw new Error(`argument mismatch: geven ${realargs} expected ${slambda.args}`);
         }
 
-        console.log('hoge');
         const envwargs = new Map(slambda.env);
         for (let i = 0; i < realargs.length; i++) {
-            console.log(slambda.args[i]);
             envwargs.set(slambda.args[i], seval(realargs[i], env));
         }
 
@@ -100,8 +95,6 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
                 return buildLambda(ls);
             } else if (symbol === intern('define')) {
                 if (ls[1] instanceof SSymbol) {
-                    console.log(ls[1]);
-                    console.log(ls[2]);
                     const slambda = seval(ls[2], env);
                     env.set(ls[1], slambda);
                     return 0;
