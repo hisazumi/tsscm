@@ -39,6 +39,34 @@ const atomp = (v: Sobj): boolean => {
         || v instanceof Function || v instanceof SSymbol;
 }
 
+const specialForms = new Map<SSymbol, Function>();
+specialForms.set(intern('lambda'), (ls : Array<Sobj>, env : SEnv):Sobj => {
+    if (ls[1] instanceof Array) { // args
+        const args = ls[1].map(v => {
+            if (v instanceof SSymbol) {
+                return v;
+            } else {
+                throw new Error('unexpected symbol');
+            }
+        });
+        const body = ls.slice(2, ls.length);
+        const newEnv = new Map(env);
+        return new SLambda(args, body, newEnv);
+    } else {
+        throw new Error(`unexpected arguments ${ls[1]}`)
+    }
+});
+
+specialForms.set(intern('define'), (ls:Array<Sobj>, env:SEnv):Sobj => {
+    if (ls[1] instanceof SSymbol) {
+        const slambda = seval(ls[2], env);
+        env.set(ls[1], slambda);
+        return 0;
+    }else{
+        throw new Error(`illigal syntax ${ls}`)
+    }
+});
+
 export const seval = (ls: Sobj, env: SEnv): Sobj => {
 //    console.log(ls);
     const lookupSymbol = (symbol: SSymbol): Sobj => {
@@ -47,23 +75,6 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
             throw new Error(`symbol '${symbol.name}' not found`);
         } else {
             return o;
-        }
-    }
-
-    const buildLambda = (ls: Array<Sobj>): SLambda => {
-        if (ls[1] instanceof Array) { // args
-            const args = ls[1].map(v => {
-                if (v instanceof SSymbol) {
-                    return v;
-                } else {
-                    throw new Error('unexpected symbol');
-                }
-            });
-            const body = ls.slice(2, ls.length);
-            const newEnv = new Map(env);
-            return new SLambda(args, body, newEnv);
-        } else {
-            throw new Error(`unexpected arguments ${ls[1]}`)
         }
     }
 
@@ -91,17 +102,9 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
     } else if (ls instanceof Array) {
         if (ls[0] instanceof SSymbol) {
             const symbol = ls[0];
-            if (symbol === intern('lambda')) {
-                return buildLambda(ls);
-            } else if (symbol === intern('define')) {
-                if (ls[1] instanceof SSymbol) {
-                    const slambda = seval(ls[2], env);
-                    env.set(ls[1], slambda);
-                    return 0;
-                }else{
-                    throw new Error(`illigal syntax ${ls}`)
-                }
-            } else {
+            
+            const specialFromHandler = specialForms.get(symbol);
+            if (specialFromHandler === undefined) {
                 const first = seval(ls[0], env);
 
                 if (first instanceof Function) {
@@ -113,6 +116,8 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
                     ls.slice(1).forEach((v) => result = seval(v, env));
                     return result;
                 }
+            }else{
+                return specialFromHandler(ls, env);
             }
         } else if (ls[0] instanceof Array) {
             const result = seval(ls[0], env);
