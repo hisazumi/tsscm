@@ -26,5 +26,11 @@ test("lambda", () => {
     expect(peval("((lambda () 1))", topLevel)).toBe(1);
     expect(peval("((lambda (x) x) 1)", topLevel)).toBe(1);
     expect(peval("((lambda (x) (+ x x)) 2)", topLevel)).toBe(4);
-    
+});
+
+test("define", () => {
+    peval("(define a 10)", topLevel)
+    expect(peval("a", topLevel)).toBe(10);
+    peval("(define 2times (lambda (x) (+ x x)))", topLevel);
+    expect(peval("(2times 2)", topLevel)).toBe(4);
 });

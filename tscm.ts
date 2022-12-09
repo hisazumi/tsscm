@@ -44,14 +44,14 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
     const lookupSymbol = (symbol: SSymbol): Sobj => {
         const o = env.get(symbol);
         if (o == undefined) {
-            throw new Error(`symbol ${ls} not found`);
+            throw new Error(`symbol '${symbol.name}' not found`);
         } else {
             return o;
         }
     }
 
     const buildLambda = (ls: Array<Sobj>): SLambda => {
-        if (ls[1] instanceof Array) { // args 
+        if (ls[1] instanceof Array) { // args
             const args = ls[1].map(v => {
                 if (v instanceof SSymbol) {
                     return v;
@@ -59,12 +59,30 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
                     throw new Error('unexpected symbol');
                 }
             });
+            console.log(args);
             const body = ls.slice(2, ls.length);
             const newEnv = new Map(env);
             return new SLambda(args, body, newEnv);
         } else {
             throw new Error(`unexpected arguments ${ls[1]}`)
         }
+    }
+
+    const evalLambda = (slambda : SLambda, realargs:Array<Sobj>) => {
+        if (realargs.length != slambda.args.length) {
+            console.log(slambda.args);
+            console.log(realargs);
+            throw new Error(`argument mismatch: geven ${realargs} expected ${slambda.args}`);
+        }
+
+        console.log('hoge');
+        const envwargs = new Map(slambda.env);
+        for (let i = 0; i < realargs.length; i++) {
+            console.log(slambda.args[i]);
+            envwargs.set(slambda.args[i], seval(realargs[i], env));
+        }
+
+        return seval(slambda.body, envwargs);
     }
 
     if (atomp(ls)) {
@@ -80,11 +98,23 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
             const symbol = ls[0];
             if (symbol === intern('lambda')) {
                 return buildLambda(ls);
+            } else if (symbol === intern('define')) {
+                if (ls[1] instanceof SSymbol) {
+                    console.log(ls[1]);
+                    console.log(ls[2]);
+                    const slambda = seval(ls[2], env);
+                    env.set(ls[1], slambda);
+                    return 0;
+                }else{
+                    throw new Error(`illigal syntax ${ls}`)
+                }
             } else {
                 const first = seval(ls[0], env);
 
                 if (first instanceof Function) {
                     return first(ls.slice(1).map((v) => seval(v, env)));
+                } else if (first instanceof SLambda) {
+                    return evalLambda(first, ls.slice(1));
                 } else {
                     let result = seval(first, env);
                     ls.slice(1).forEach((v) => result = seval(v, env));
@@ -94,17 +124,7 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
         } else if (ls[0] instanceof Array) {
             const result = seval(ls[0], env);
             if (result instanceof SLambda) {
-                const args = ls.slice(1, ls.length);
-                if (args.length != result.args.length) {
-                    throw new Error("argument mismatch");
-                }
-
-                const envwargs = new Map(result.env);
-                for (let i = 0; i < args.length; i++) {
-                    envwargs.set(result.args[i], seval(args[i], env));
-                }
-
-                return seval(result.body, envwargs);
+                return evalLambda(result, ls.slice(1));
             } else {
                 return result;
             }
