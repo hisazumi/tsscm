@@ -41,6 +41,7 @@ test("if", () => {
     peval("(define x 10)", topLevel);
     expect(peval("(if (= x 10) 1 0)", topLevel)).toBe(1);
     expect(peval("(if (= x 9) 1 0)", topLevel)).toBe(0);
-
+    expect(peval("(if (= x 10) (+ 1 2) (+ 3 4))", topLevel)).toBe(3);
+    expect(peval("(if (= x 9) (+ 1 2) (+ 3 4))", topLevel)).toBe(7);
 
  });
