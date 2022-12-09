@@ -28,7 +28,7 @@ export const intern = (sym: string): SSymbol => {
     }
 }
 
-export type Atom = string | number | Function | SSymbol | SLambda;
+export type Atom = string | number | Function | SSymbol | SLambda | boolean;
 export type Slist = Array<Atom | Slist>;
 export type Sobj = Atom | Slist;
 export type SEnv = Map<SSymbol, Sobj>;
@@ -64,6 +64,20 @@ specialForms.set(intern('define'), (ls:Array<Sobj>, env:SEnv):Sobj => {
         return 0;
     }else{
         throw new Error(`illigal syntax ${ls}`)
+    }
+});
+
+specialForms.set(intern('if'),(ls:Array<Sobj>, env:SEnv):Sobj => {
+    if (2 <= ls.length  && ls.length <= 3) {
+        throw new Error('illigal if');
+    }
+
+    if(seval(ls[1], env) == true) {
+        return seval(ls[2], env);
+    }else if(ls.length == 4){
+        return seval(ls[3], env);
+    }else{
+        return -1;
     }
 });
 
@@ -188,4 +202,10 @@ topLevel.set(intern('+'), (ls: Slist) => {
             return acc;
         }
     });
+});
+
+topLevel.set(intern('='), (ls: Slist) => {
+    return ls.reduce((acc, cur, index, array) => {
+        return acc == cur;
+    });    
 });

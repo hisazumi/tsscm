@@ -34,3 +34,13 @@ test("define", () => {
     peval("(define 2times (lambda (x) (+ x x)))", topLevel);
     expect(peval("(2times 2)", topLevel)).toBe(4);
 });
+
+test("if", () => {
+    expect(peval("(if (= 1 1) 1 0)", topLevel)).toBe(1);
+    expect(peval("(if (= 1 2) 1 0)", topLevel)).toBe(0);
+    peval("(define x 10)", topLevel);
+    expect(peval("(if (= x 10) 1 0)", topLevel)).toBe(1);
+    expect(peval("(if (= x 9) 1 0)", topLevel)).toBe(0);
+
+
+ });
