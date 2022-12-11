@@ -16,6 +16,33 @@ class SLambda {
     env: SEnv;
 }
 
+class SEnv {
+    constructor(up: SEnv|null = null) {
+        this.env = new Map<SSymbol, Sobj>();
+        this.up = up;
+    }
+
+    get(symbol:SSymbol) : Sobj {
+        const o = this.env.get(symbol);
+        if (o == undefined) {
+            if (this.up == null) {
+                throw new Error(`symbol '${symbol.name}' not found`);
+            }else{
+                return this.up.get(symbol);
+            }
+        } else {
+            return o;
+        }        
+    };
+
+    set(symbol:SSymbol, obj:Sobj) {
+        this.env.set(symbol, obj);
+    }
+
+    env: Map<SSymbol, Sobj>;
+    up: SEnv | null;
+}
+
 const symbolTable = new Map<string, SSymbol>();
 export const intern = (sym: string): SSymbol => {
     const s = symbolTable.get(sym);
@@ -31,7 +58,6 @@ export const intern = (sym: string): SSymbol => {
 export type Atom = string | number | Function | SSymbol | SLambda | boolean;
 export type Slist = Array<Atom | Slist>;
 export type Sobj = Atom | Slist;
-export type SEnv = Map<SSymbol, Sobj>;
 
 const atomp = (v: Sobj): boolean => {
     const type = typeof v;
@@ -50,7 +76,7 @@ specialForms.set(intern('lambda'), (ls : Array<Sobj>, env : SEnv):Sobj => {
             }
         });
         const body = ls.slice(2, ls.length);
-        const newEnv = new Map(env);
+        const newEnv = new SEnv(env);
         return new SLambda(args, body, newEnv);
     } else {
         throw new Error(`unexpected arguments ${ls[1]}`)
@@ -59,8 +85,7 @@ specialForms.set(intern('lambda'), (ls : Array<Sobj>, env : SEnv):Sobj => {
 
 specialForms.set(intern('define'), (ls:Array<Sobj>, env:SEnv):Sobj => {
     if (ls[1] instanceof SSymbol) {
-        const slambda = seval(ls[2], env);
-        env.set(ls[1], slambda);
+        env.set(ls[1], seval(ls[2], env));
         return 0;
     }else{
         throw new Error(`illigal syntax ${ls}`)
@@ -83,21 +108,13 @@ specialForms.set(intern('if'),(ls:Array<Sobj>, env:SEnv):Sobj => {
 
 export const seval = (ls: Sobj, env: SEnv): Sobj => {
 //    console.log(ls);
-    const lookupSymbol = (symbol: SSymbol): Sobj => {
-        const o = env.get(symbol);
-        if (o == undefined) {
-            throw new Error(`symbol '${symbol.name}' not found`);
-        } else {
-            return o;
-        }
-    }
 
     const evalLambda = (slambda : SLambda, realargs:Array<Sobj>) => {
         if (realargs.length != slambda.args.length) {
             throw new Error(`argument mismatch: geven ${realargs} expected ${slambda.args}`);
         }
 
-        const envwargs = new Map(slambda.env);
+        const envwargs = new SEnv(slambda.env);
         for (let i = 0; i < realargs.length; i++) {
             envwargs.set(slambda.args[i], seval(realargs[i], env));
         }
@@ -107,7 +124,7 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
 
     if (atomp(ls)) {
         if (ls instanceof SSymbol) {
-            return lookupSymbol(ls);
+            return env.get(ls);
         } else {
             return ls;
         }
@@ -188,7 +205,7 @@ export const peval = (str: string, env: SEnv): Sobj => {
 
 //-------------------------------------------------------
 // Environment
-export const topLevel = new Map<SSymbol, Sobj>();
+export const topLevel = new SEnv();
 
 topLevel.set(intern('display'), (ls: Slist) => {
     console.log(ls);
@@ -198,6 +215,16 @@ topLevel.set(intern('+'), (ls: Slist) => {
     return ls.reduce((acc, cur, index, array) => {
         if (typeof acc === 'number' && typeof cur === 'number') {
             return acc + cur;
+        } else {
+            return acc;
+        }
+    });
+});
+
+topLevel.set(intern('*'), (ls: Slist) => {
+    return ls.reduce((acc, cur, index, array) => {
+        if (typeof acc === 'number' && typeof cur === 'number') {
+            return acc * cur;
         } else {
             return acc;
         }
