@@ -17,25 +17,40 @@ class SLambda {
 }
 
 class SEnv {
-    constructor(up: SEnv|null = null) {
+    constructor(up: SEnv | null = null) {
         this.env = new Map<SSymbol, Sobj>();
         this.up = up;
     }
 
-    get(symbol:SSymbol) : Sobj {
+    get(symbol: SSymbol): Sobj {
         const o = this.env.get(symbol);
         if (o == undefined) {
             if (this.up == null) {
                 throw new Error(`symbol '${symbol.name}' not found`);
-            }else{
+            } else {
                 return this.up.get(symbol);
             }
         } else {
             return o;
-        }        
+        }
     };
 
-    set(symbol:SSymbol, obj:Sobj) {
+    set(symbol: SSymbol, obj: Sobj) {
+        const o = this.env.get(symbol);
+        if (o == undefined) {
+            if (this.up == null) {
+                throw new Error(`symbol '${symbol.name}' not found`);
+            } else {
+                this.up.set(symbol, obj);
+                return;
+            }
+        }else{
+            this.env.set(symbol, obj);
+            return;
+        }
+    }
+
+    define(symbol: SSymbol, obj: Sobj) {
         this.env.set(symbol, obj);
     }
 
@@ -66,7 +81,7 @@ const atomp = (v: Sobj): boolean => {
 }
 
 const specialForms = new Map<SSymbol, Function>();
-specialForms.set(intern('lambda'), (ls : Array<Sobj>, env : SEnv):Sobj => {
+specialForms.set(intern('lambda'), (ls: Array<Sobj>, env: SEnv): Sobj => {
     if (ls[1] instanceof Array) { // args
         const args = ls[1].map(v => {
             if (v instanceof SSymbol) {
@@ -83,40 +98,53 @@ specialForms.set(intern('lambda'), (ls : Array<Sobj>, env : SEnv):Sobj => {
     }
 });
 
-specialForms.set(intern('define'), (ls:Array<Sobj>, env:SEnv):Sobj => {
+specialForms.set(intern('define'), (ls: Array<Sobj>, env: SEnv): Sobj => {
     if (ls[1] instanceof SSymbol) {
-        env.set(ls[1], seval(ls[2], env));
+        env.define(ls[1], seval(ls[2], env));
         return 0;
-    }else{
+    } else {
         throw new Error(`illigal syntax ${ls}`)
     }
 });
 
-specialForms.set(intern('if'),(ls:Array<Sobj>, env:SEnv):Sobj => {
-    if (2 <= ls.length  && ls.length <= 3) {
+specialForms.set(intern('if'), (ls: Array<Sobj>, env: SEnv): Sobj => {
+    if (2 <= ls.length && ls.length <= 3) {
         throw new Error('illigal if');
     }
 
-    if(seval(ls[1], env) == true) {
+    if (seval(ls[1], env) == true) {
         return seval(ls[2], env);
-    }else if(ls.length == 4){
+    } else if (ls.length == 4) {
         return seval(ls[3], env);
-    }else{
+    } else {
         return -1;
     }
 });
 
-export const seval = (ls: Sobj, env: SEnv): Sobj => {
-//    console.log(ls);
+specialForms.set(intern('set!'), (ls: Array<Sobj>, env: SEnv): Sobj => {
+    if (ls.length != 3 || !(ls[1] instanceof SSymbol)) {
+        throw new Error('illigal set!');
+    }
 
-    const evalLambda = (slambda : SLambda, realargs:Array<Sobj>) => {
+    console.log(ls);
+    console.log(`before: ${env.get(ls[1])}`);
+    env.set(ls[1], seval(ls[2], env));
+    console.log(`after: ${env.get(ls[1])}`);
+
+    return 0;//undefined
+});
+
+export const seval = (ls: Sobj, env: SEnv): Sobj => {
+        //console.log(ls);
+
+    const evalLambda = (slambda: SLambda, realargs: Array<Sobj>) => {
         if (realargs.length != slambda.args.length) {
             throw new Error(`argument mismatch: geven ${realargs} expected ${slambda.args}`);
         }
 
         const envwargs = new SEnv(slambda.env);
         for (let i = 0; i < realargs.length; i++) {
-            envwargs.set(slambda.args[i], seval(realargs[i], env));
+            envwargs.define(slambda.args[i], seval(realargs[i], env));
         }
 
         return seval(slambda.body, envwargs);
@@ -128,37 +156,27 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
         } else {
             return ls;
         }
-    } else if (ls instanceof SLambda) {
-        return seval(ls.body, ls.env);
     } else if (ls instanceof Array) {
         if (ls[0] instanceof SSymbol) {
-            const symbol = ls[0];
-            
-            const specialFromHandler = specialForms.get(symbol);
-            if (specialFromHandler === undefined) {
-                const first = seval(ls[0], env);
+            const specialFormHandler = specialForms.get(ls[0]);
+            if (specialFormHandler !== undefined) {
+                return specialFormHandler(ls, env);
+            }
+        }
 
-                if (first instanceof Function) {
-                    return first(ls.slice(1).map((v) => seval(v, env)));
-                } else if (first instanceof SLambda) {
-                    return evalLambda(first, ls.slice(1));
-                } else {
-                    let result = seval(first, env);
-                    ls.slice(1).forEach((v) => result = seval(v, env));
-                    return result;
-                }
-            }else{
-                return specialFromHandler(ls, env);
-            }
-        } else if (ls[0] instanceof Array) {
-            const result = seval(ls[0], env);
-            if (result instanceof SLambda) {
-                return evalLambda(result, ls.slice(1));
-            } else {
-                return result;
-            }
-        } else {
-            return ls[0];
+        if (ls[0] instanceof SLambda) {
+            return evalLambda(ls[0], ls.slice(1).map((v) => seval(v, env)));
+        }
+
+        const result = seval(ls[0], env);
+
+        if (result instanceof Function) {
+            console.log(ls.slice(1))
+            return result(ls.slice(1).map((v) => seval(v, env)));
+        }else if (ls.length == 1) {
+            return result;
+        }else{
+            return seval(ls.slice(1), env);
         }
     } else {
         throw new Error(`cannot evaluate ${ls}`);
@@ -207,11 +225,11 @@ export const peval = (str: string, env: SEnv): Sobj => {
 // Environment
 export const topLevel = new SEnv();
 
-topLevel.set(intern('display'), (ls: Slist) => {
+topLevel.define(intern('display'), (ls: Slist) => {
     console.log(ls);
 });
 
-topLevel.set(intern('+'), (ls: Slist) => {
+topLevel.define(intern('+'), (ls: Slist) => {
     return ls.reduce((acc, cur, index, array) => {
         if (typeof acc === 'number' && typeof cur === 'number') {
             return acc + cur;
@@ -221,7 +239,7 @@ topLevel.set(intern('+'), (ls: Slist) => {
     });
 });
 
-topLevel.set(intern('*'), (ls: Slist) => {
+topLevel.define(intern('*'), (ls: Slist) => {
     return ls.reduce((acc, cur, index, array) => {
         if (typeof acc === 'number' && typeof cur === 'number') {
             return acc * cur;
@@ -231,8 +249,13 @@ topLevel.set(intern('*'), (ls: Slist) => {
     });
 });
 
-topLevel.set(intern('='), (ls: Slist) => {
+topLevel.define(intern('='), (ls: Slist) => {
     return ls.reduce((acc, cur, index, array) => {
         return acc == cur;
-    });    
+    });
 });
+
+peval("(define counter ((lambda (x) (lambda () (set! x (+ x 1)) x)) 0))", topLevel);
+console.log(peval("(counter)", topLevel));
+console.log(peval("(counter)", topLevel));
+console.log(peval("(counter)", topLevel));
