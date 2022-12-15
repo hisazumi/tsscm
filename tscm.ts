@@ -164,16 +164,14 @@ export const seval = (ls: Sobj, env: SEnv): Sobj => {
             }
         }
 
-        if (ls[0] instanceof SLambda) {
-            return evalLambda(ls[0], ls.slice(1).map((v) => seval(v, env)));
-        }
-
         const result = seval(ls[0], env);
 
         if (result instanceof Function) {
             console.log(ls.slice(1))
             return result(ls.slice(1).map((v) => seval(v, env)));
-        }else if (ls.length == 1) {
+        }else if (result instanceof SLambda) {
+            return evalLambda(result, ls.slice(1).map((v) => seval(v, env)));
+        } else if (ls.length == 1) {
             return result;
         }else{
             return seval(ls.slice(1), env);
@@ -258,4 +256,4 @@ topLevel.define(intern('='), (ls: Slist) => {
 peval("(define counter ((lambda (x) (lambda () (set! x (+ x 1)) x)) 0))", topLevel);
 console.log(peval("(counter)", topLevel));
 console.log(peval("(counter)", topLevel));
-console.log(peval("(counter)", topLevel));
+console.log(peval("(counter)", topLevel)); 
